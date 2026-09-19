@@ -25,12 +25,26 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 12266719
+          packages: |
+            platform-tools
+            build-tools;35.0.0
+            platforms;android-35
+            ndk;27.3.13750724
+            cmake;3.22.1
 
-      - name: Accept Licenses & Install NDK and CMake
+      - name: Accept Android licenses
         run: |
-          SDK_DIR="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
-          yes | "$SDK_DIR"/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          "$SDK_DIR"/cmdline-tools/latest/bin/sdkmanager --install "ndk;27.3.13750724" "cmake;3.22.1" || true
+          SDKMANAGER="${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+
+      - name: Verify Android SDK
+        run: |
+          sdkmanager --version
+          adb version
+          test -d "${ANDROID_HOME}/ndk/27.3.13750724"
+          test -d "${ANDROID_HOME}/cmake/3.22.1"
 
       - name: Create local.properties
         env:
