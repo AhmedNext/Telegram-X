@@ -27,17 +27,16 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           cmdline-tools-version: 12266719
-          packages: |
-            platform-tools
-            build-tools;35.0.0
-            platforms;android-35
-            ndk;27.3.13750724
-            cmake;3.22.1
+          accept-android-sdk-licenses: true
 
-      - name: Accept Android licenses
+      - name: Install Android SDK packages
         run: |
-          SDKMANAGER="${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager"
-          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          sdkmanager \
+            "platform-tools" \
+            "build-tools;35.0.0" \
+            "platforms;android-35" \
+            "ndk;27.3.13750724" \
+            "cmake;3.22.1"
 
       - name: Verify Android SDK
         run: |
