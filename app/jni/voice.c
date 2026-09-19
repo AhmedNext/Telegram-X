@@ -272,7 +272,7 @@ static int writeOggPage(ogg_page *page, FILE *os) {
     return written;
 }
 
-const opus_int32 bitrate = 32000;
+const opus_int32 bitrate = 48000;
 const opus_int32 frame_size = 960;
 const int with_cvbr = 1;
 const int max_ogg_delay = 0;
@@ -347,7 +347,6 @@ int initRecorder(const char *path, opus_int32 sampleRate) {
 
     coding_rate = sampleRate;
     rate = sampleRate;
-    bitrate = 48000;
 
     soundtouch_init_recorder(coding_rate, -2.3f);
 
@@ -555,7 +554,6 @@ int resumeRecorder(const char *path, opus_int32 sampleRate) {
 
     coding_rate = sampleRate;
     rate = sampleRate;
-    bitrate = 48000;
 
     soundtouch_init_recorder(coding_rate, -2.3f);
 
@@ -706,47 +704,6 @@ int writeFrame(uint8_t *framePcmBytes, unsigned int frameByteCount) {
             free(paddedFrameBytes);
             paddedFrameBytes = NULL;
         }
-    }
-
-    while ((((size_segments <= 255) && (last_segments + size_segments > 255)) || (enc_granulepos - last_granulepos > max_ogg_delay)) && ogg_stream_flush_fill(&os, &og, 255 * 255)) {
-        if (ogg_page_packets(&og) != 0) {
-            last_granulepos = ogg_page_granulepos(&og);
-        }
-
-        last_segments -= og.header[26];
-        int writtenPageBytes = writeOggPage(&og, _fileOs);
-        if (writtenPageBytes != og.header_len + og.body_len) {
-            loge(TAG_VOICE, "Error: failed writing data to output stream");
-
-            return 0;
-        }
-        bytes_written += writtenPageBytes;
-        pages_out++;
-    }
-
-    op.packet = (unsigned char *)_packet;
-    op.bytes = nbBytes;
-    op.b_o_s = 0;
-    op.granulepos = enc_granulepos;
-    if (op.e_o_s) {
-        op.granulepos = ((total_samples * 48000 + rate - 1) / rate) + header.preskip;
-    }
-    op.packetno = 2 + _packetId;
-    ogg_stream_packetin(&os, &op);
-    last_segments += size_segments;
-
-    while ((op.e_o_s || (enc_granulepos + (frame_size * 48000 / coding_rate) - last_granulepos > max_ogg_delay) || (last_segments >= 255)) ? ogg_stream_flush_fill(&os, &og, 255 * 255) : ogg_stream_pageout_fill(&os, &og, 255 * 255)) {
-        if (ogg_page_packets(&og) != 0) {
-            last_granulepos = ogg_page_granulepos(&og);
-        }
-        last_segments -= og.header[26];
-        int writtenPageBytes = writeOggPage(&og, _fileOs);
-        if (writtenPageBytes != og.header_len + og.body_len) {
-            loge(TAG_VOICE, "Error: failed writing data to output stream");
-            return 0;
-        }
-        bytes_written += writtenPageBytes;
-        pages_out++;
     }
 
     return 1;
