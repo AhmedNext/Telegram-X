@@ -111,6 +111,9 @@ public final class N {
   public static native long getTotalPcmDuration ();
   public static native byte[] getWaveform (String path);
   public static native byte[] getWaveform2 (short[] array, int length);
+  public static native void processVideoNoteAudioByteArray (byte[] array, int offset, int len, int sampleRate);
+  public static native void stopVideoNoteAudio ();
+  public static native void setVoiceCompressorEnabled (boolean enabled);
 
   // jni_utils.cpp
   public native static String readlink (String path);

@@ -27,6 +27,7 @@ import android.text.TextUtils;
 import org.drinkless.tdlib.TdApi;
 import org.thunderdog.challegram.Log;
 import org.thunderdog.challegram.N;
+import org.thunderdog.challegram.config.Config;
 import org.thunderdog.challegram.U;
 import org.thunderdog.challegram.core.BaseThread;
 import org.thunderdog.challegram.filegen.GenerationInfo;
@@ -240,6 +241,7 @@ public class Recorder implements Runnable {
     }
 
     try {
+      N.setVoiceCompressorEnabled(Config.isVoiceCompressorEnabled());
       tryInitEnhancers();
       if (!isResume) {
         recordStart = SystemClock.elapsedRealtime();
@@ -523,7 +525,7 @@ public class Recorder implements Runnable {
       if (NoiseSuppressor.isAvailable()) {
         ns = NoiseSuppressor.create(recorder.getAudioSessionId());
         if (ns != null)
-          ns.setEnabled(isGoodAudioEffect(ns));
+          ns.setEnabled(false); // Bypass hardware noise suppressor to prevent voice clipping and retain studio warmth
       } else {
         Log.w(Log.TAG_VOICE, "NoiseSuppressor is not available on this device");
       }

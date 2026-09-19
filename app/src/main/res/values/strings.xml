@@ -5908,4 +5908,7 @@
   <string name="RestrictedContent">Restricted Content</string>
   <string name="SensitiveContent">Sensitive Content</string>
 
+  <string name="VoiceCompressor">Broadcast Compressor &amp; Warm Tube Saturation</string>
+  <string name="VoiceCompressorDesc">Apply studio broadcast compression and subtle tube warmth to outgoing voice and video messages.</string>
+
 </resources>

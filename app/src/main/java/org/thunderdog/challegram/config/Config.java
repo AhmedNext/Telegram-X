@@ -344,4 +344,25 @@ public class Config {
   public static final boolean ENABLE_TEXT_ANIMATIONS = false;
 
   public static final boolean COMPILE_CHECK = false /*never set to true*/;
+
+  public static boolean isVoiceCompressorEnabled () {
+    try {
+      return org.thunderdog.challegram.tool.UI.getAppContext()
+        .getSharedPreferences("voice_fx", android.content.Context.MODE_PRIVATE)
+        .getBoolean("voice_compressor", false);
+    } catch (Throwable t) {
+      return false;
+    }
+  }
+
+  public static void setVoiceCompressorEnabled (boolean enabled) {
+    try {
+      org.thunderdog.challegram.tool.UI.getAppContext()
+        .getSharedPreferences("voice_fx", android.content.Context.MODE_PRIVATE)
+        .edit().putBoolean("voice_compressor", enabled).apply();
+    } catch (Throwable ignored) { }
+    try {
+      N.setVoiceCompressorEnabled(enabled);
+    } catch (Throwable ignored) { }
+  }
 }

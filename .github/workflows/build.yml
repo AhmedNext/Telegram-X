@@ -1,0 +1,68 @@
+name: Build Poco X5 Pro 64-bit APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Latest Arm64 (Poco X5 Pro)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Licenses & Install NDK and CMake
+        run: |
+          SDK_DIR="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          yes | "$SDK_DIR"/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          "$SDK_DIR"/cmdline-tools/latest/bin/sdkmanager --install "ndk;27.3.13750724" "cmake;3.22.1" || true
+
+      - name: Create local.properties
+        env:
+          SECRET_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          SECRET_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+        run: |
+          SDK_DIR="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          API_ID="${SECRET_API_ID:-24001192}"
+          API_HASH="${SECRET_API_HASH:-172896bf88d793b99641a69c7ca9d463}"
+          cat <<EOF > local.properties
+          sdk.dir=$SDK_DIR
+          telegram.api_id=$API_ID
+          telegram.api_hash=$API_HASH
+          app.name=Telegram X
+          app.id=org.thunderdog.challegram
+          app.download_url=https://telegram.org/dlx
+          app.sources_url=https://github.com/AhmedNext/Telegram-X
+          app.disable_signing=true
+          app.dontobfuscate=true
+          EOF
+          cat local.properties
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build arm64-v8a Debug APK
+        run: |
+          ./gradlew :app:assembleLatestArm64Debug --stacktrace -Dorg.gradle.jvmargs="-Xmx5g -XX:MaxMetaspaceSize=1g"
+
+      - name: Upload Poco X5 Pro 64-bit APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TelegramX-arm64-debug-apk
+          path: app/build/outputs/apk/**/debug/*.apk
+          if-no-files-found: error

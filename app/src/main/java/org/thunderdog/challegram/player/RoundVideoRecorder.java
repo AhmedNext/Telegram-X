@@ -36,6 +36,8 @@ import android.view.Surface;
 import androidx.annotation.RequiresApi;
 
 import org.thunderdog.challegram.Log;
+import org.thunderdog.challegram.N;
+import org.thunderdog.challegram.config.Config;
 import org.thunderdog.challegram.U;
 import org.thunderdog.challegram.tool.UI;
 import org.thunderdog.challegram.ui.camera.legacy.CameraApi;
@@ -990,6 +992,9 @@ public class RoundVideoRecorder {
               }
               break;
             }
+            try {
+              N.processVideoNoteAudioByteArray(buffer.buffer, a * 2048, readResult, audioRecorder.getSampleRate());
+            } catch (Throwable ignored) { }
             buffer.offset[a] = audioPresentationTimeNs;
             buffer.read[a] = readResult;
           }
@@ -1015,11 +1020,17 @@ public class RoundVideoRecorder {
         } catch (Exception e) {
           Log.e(Log.TAG_ROUND, "Error", e);
         }
+        try {
+          N.stopVideoNoteAudio();
+        } catch (Throwable ignored) { }
         handler.sendMessage(handler.obtainMessage(MSG_STOP_RECORDING, sendWhenDone, 0));
       }
     };
 
     public void startRecording(File outputFile, int size, int bitRate, android.opengl.EGLContext sharedContext) {
+      try {
+        N.setVoiceCompressorEnabled(Config.isVoiceCompressorEnabled());
+      } catch (Throwable ignored) { }
       videoFile = outputFile;
       videoWidth = size;
       videoHeight = size;
@@ -1326,7 +1337,7 @@ public class RoundVideoRecorder {
         audioFormat.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
         audioFormat.setInteger(MediaFormat.KEY_SAMPLE_RATE, sampleRate);
         audioFormat.setInteger(MediaFormat.KEY_CHANNEL_COUNT, 1);
-        audioFormat.setInteger(MediaFormat.KEY_BIT_RATE, 32000);
+        audioFormat.setInteger(MediaFormat.KEY_BIT_RATE, 128000);
         audioFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 2048 * 10);
 
         audioEncoder = MediaCodec.createEncoderByType(AUDIO_MIME_TYPE);
@@ -1594,5 +1605,5 @@ public class RoundVideoRecorder {
     }
   }
 
-  private static final int[] SAMPLE_RATES = {44100, 22050, 11025, 8000};
+  private static final int[] SAMPLE_RATES = {48000, 44100, 22050, 11025, 8000};
 }

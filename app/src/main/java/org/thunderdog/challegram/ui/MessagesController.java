@@ -10569,6 +10569,11 @@ public class MessagesController extends ViewController<MessagesController.Argume
       }
     }
     if (set) {
+      if (action == TdApi.ChatActionRecordingVoiceNote.CONSTRUCTOR ||
+          action == TdApi.ChatActionRecordingVideoNote.CONSTRUCTOR ||
+          action == TdApi.ChatActionRecordingVideo.CONSTRUCTOR) {
+        return; // Ghost mode: suppress voice/video recording action to chat
+      }
       int time = (int) (SystemClock.uptimeMillis() / 1000L);
       if (time - actions.get(action) >= 4 || force || lastActionCancelled) {
         actions.put(action, time);

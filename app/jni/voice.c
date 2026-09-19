@@ -20,6 +20,16 @@
 #include <opusfile.h>
 #include <string.h>
 
+/* SoundTouch C-Bridge Functions */
+extern void soundtouch_init_recorder(int sampleRate, float pitchSemitones);
+extern void soundtouch_put_samples(const short *samples, int numSamples);
+extern int soundtouch_receive_samples(short *output, int maxSamples);
+extern int soundtouch_num_samples(void);
+extern void soundtouch_clear_recorder(void);
+extern void soundtouch_process_video_note_frame(short *samples, int numSamples, int channels, int sampleRate, float pitchSemitones);
+extern void soundtouch_clear_video_note(void);
+extern void soundtouch_set_compressor_enabled(int enabled);
+
 #define NO_AUDIO_LOG
 
 #ifndef NO_AUDIO_LOG
@@ -329,6 +339,7 @@ void cleanupRecorder() {
     memset(&header, 0, sizeof(OpusHeader));
     memset(&op, 0, sizeof(ogg_packet));
     memset(&og, 0, sizeof(ogg_page));
+    soundtouch_clear_recorder();
 }
 
 int initRecorder(const char *path, opus_int32 sampleRate) {
@@ -336,6 +347,9 @@ int initRecorder(const char *path, opus_int32 sampleRate) {
 
     coding_rate = sampleRate;
     rate = sampleRate;
+    bitrate = 48000;
+
+    soundtouch_init_recorder(coding_rate, -2.3f);
 
     if (!path) {
         loge(TAG_VOICE, "path is null");
@@ -376,7 +390,7 @@ int initRecorder(const char *path, opus_int32 sampleRate) {
     header.nb_streams = 1;
 
     int result = OPUS_OK;
-    _encoder = opus_encoder_create(coding_rate, 1, OPUS_APPLICATION_VOIP, &result);
+    _encoder = opus_encoder_create(coding_rate, 1, OPUS_APPLICATION_AUDIO, &result);
     if (result != OPUS_OK) {
         loge(TAG_VOICE, "Error cannot create encoder: %s", opus_strerror(result));
         return 0;
@@ -386,11 +400,15 @@ int initRecorder(const char *path, opus_int32 sampleRate) {
     _packet = malloc(max_frame_bytes);
 
     result = opus_encoder_ctl(_encoder, OPUS_SET_BITRATE(bitrate));
-    //result = opus_encoder_ctl(_encoder, OPUS_SET_COMPLEXITY(10));
     if (result != OPUS_OK) {
         loge(TAG_VOICE, "Error OPUS_SET_BITRATE returned: %s", opus_strerror(result));
         return 0;
     }
+
+    opus_encoder_ctl(_encoder, OPUS_SET_COMPLEXITY(10));
+    opus_encoder_ctl(_encoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
+    opus_encoder_ctl(_encoder, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_FULLBAND));
+    opus_encoder_ctl(_encoder, OPUS_SET_VBR(1));
 
 #ifdef OPUS_SET_LSB_DEPTH
     result = opus_encoder_ctl(_encoder, OPUS_SET_LSB_DEPTH(max(8, min(24, inopt.samplesize))));
@@ -537,6 +555,9 @@ int resumeRecorder(const char *path, opus_int32 sampleRate) {
 
     coding_rate = sampleRate;
     rate = sampleRate;
+    bitrate = 48000;
+
+    soundtouch_init_recorder(coding_rate, -2.3f);
 
     if (!path) {
         loge("path is null");
@@ -567,7 +588,7 @@ int resumeRecorder(const char *path, opus_int32 sampleRate) {
     }
 
     int result = OPUS_OK;
-    _encoder = opus_encoder_create(coding_rate, 1, OPUS_APPLICATION_VOIP, &result);
+    _encoder = opus_encoder_create(coding_rate, 1, OPUS_APPLICATION_AUDIO, &result);
     if (result != OPUS_OK) {
         loge(TAG_VOICE, "Error cannot create encoder: %s", opus_strerror(result));
         return 0;
@@ -576,11 +597,15 @@ int resumeRecorder(const char *path, opus_int32 sampleRate) {
     _packet = malloc(max_frame_bytes);
 
     result = opus_encoder_ctl(_encoder, OPUS_SET_BITRATE(bitrate));
-    //result = opus_encoder_ctl(_encoder, OPUS_SET_COMPLEXITY(10));
     if (result != OPUS_OK) {
         loge(TAG_VOICE, "Error OPUS_SET_BITRATE returned: %s", opus_strerror(result));
         return 0;
     }
+
+    opus_encoder_ctl(_encoder, OPUS_SET_COMPLEXITY(10));
+    opus_encoder_ctl(_encoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
+    opus_encoder_ctl(_encoder, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_FULLBAND));
+    opus_encoder_ctl(_encoder, OPUS_SET_VBR(1));
 
 #ifdef OPUS_SET_LSB_DEPTH
     result = opus_encoder_ctl(_encoder, OPUS_SET_LSB_DEPTH(max(8, min(24, 16))));
@@ -602,14 +627,6 @@ int writeFrame(uint8_t *framePcmBytes, unsigned int frameByteCount) {
     _packetId++;
 
     opus_int32 nb_samples = frameByteCount / 2;
-    total_samples += nb_samples;
-    if (nb_samples < frame_size) {
-        op.e_o_s = 1;
-    } else {
-        op.e_o_s = 0;
-    }
-
-    int nbBytes = 0;
 
     if (nb_samples != 0) {
         uint8_t *paddedFrameBytes = framePcmBytes;
@@ -622,20 +639,73 @@ int writeFrame(uint8_t *framePcmBytes, unsigned int frameByteCount) {
             memset(paddedFrameBytes + nb_samples * 2, 0, cur_frame_size * 2 - nb_samples * 2);
         }
 
-        nbBytes = opus_encode(_encoder, (opus_int16 *)paddedFrameBytes, cur_frame_size, _packet, max_frame_bytes / 10);
+        // Pipe audio through SoundTouch (-2.3 semitones + 3-Band Vocal EQ + Compressor)
+        soundtouch_put_samples((const short *)paddedFrameBytes, cur_frame_size);
+        int available = soundtouch_num_samples();
+        while (available >= cur_frame_size) {
+            short *stOutBuffer = (short *)malloc(cur_frame_size * sizeof(short));
+            int rec = soundtouch_receive_samples(stOutBuffer, cur_frame_size);
+            if (rec > 0) {
+                total_samples += rec;
+                op.e_o_s = (rec < cur_frame_size) ? 1 : 0;
+                int nbBytes = opus_encode(_encoder, stOutBuffer, rec, _packet, max_frame_bytes / 10);
+                if (nbBytes > 0) {
+                    enc_granulepos += rec * 48000 / coding_rate;
+                    size_segments = (nbBytes + 255) / 255;
+                    min_bytes = nbBytes < min_bytes ? nbBytes : min_bytes;
+
+                    while ((((size_segments <= 255) && (last_segments + size_segments > 255)) || (enc_granulepos - last_granulepos > max_ogg_delay)) && ogg_stream_flush_fill(&os, &og, 255 * 255)) {
+                        if (ogg_page_packets(&og) != 0) {
+                            last_granulepos = ogg_page_granulepos(&og);
+                        }
+                        last_segments -= og.header[26];
+                        int writtenPageBytes = writeOggPage(&og, _fileOs);
+                        if (writtenPageBytes != og.header_len + og.body_len) {
+                            loge(TAG_VOICE, "Error: failed writing data to output stream");
+                            free(stOutBuffer);
+                            if (freePaddedFrameBytes) free(paddedFrameBytes);
+                            return 0;
+                        }
+                        bytes_written += writtenPageBytes;
+                        pages_out++;
+                    }
+
+                    op.packet = (unsigned char *)_packet;
+                    op.bytes = nbBytes;
+                    op.b_o_s = 0;
+                    op.granulepos = enc_granulepos;
+                    if (op.e_o_s) {
+                        op.granulepos = ((total_samples * 48000 + rate - 1) / rate) + header.preskip;
+                    }
+                    op.packetno = 2 + _packetId;
+                    ogg_stream_packetin(&os, &op);
+                    last_segments += size_segments;
+
+                    while ((op.e_o_s || (enc_granulepos + (frame_size * 48000 / coding_rate) - last_granulepos > max_ogg_delay) || (last_segments >= 255)) ? ogg_stream_flush_fill(&os, &og, 255 * 255) : ogg_stream_pageout_fill(&os, &og, 255 * 255)) {
+                        if (ogg_page_packets(&og) != 0) {
+                            last_granulepos = ogg_page_granulepos(&og);
+                        }
+                        last_segments -= og.header[26];
+                        int writtenPageBytes = writeOggPage(&og, _fileOs);
+                        if (writtenPageBytes != og.header_len + og.body_len) {
+                            loge(TAG_VOICE, "Error: failed writing data to output stream");
+                            free(stOutBuffer);
+                            if (freePaddedFrameBytes) free(paddedFrameBytes);
+                            return 0;
+                        }
+                        bytes_written += writtenPageBytes;
+                        pages_out++;
+                    }
+                }
+            }
+            free(stOutBuffer);
+            available = soundtouch_num_samples();
+        }
+
         if (freePaddedFrameBytes) {
             free(paddedFrameBytes);
             paddedFrameBytes = NULL;
         }
-
-        if (nbBytes < 0) {
-          loge(TAG_VOICE, "Encoding failed: %s. Aborting.", opus_strerror(nbBytes));
-          return 0;
-        }
-
-        enc_granulepos += cur_frame_size * 48000 / coding_rate;
-        size_segments = (nbBytes + 255) / 255;
-        min_bytes = nbBytes < min_bytes ? nbBytes : min_bytes;
     }
 
     while ((((size_segments <= 255) && (last_segments + size_segments > 255)) || (enc_granulepos - last_granulepos > max_ogg_delay)) && ogg_stream_flush_fill(&os, &og, 255 * 255)) {
@@ -716,6 +786,22 @@ JNIEXPORT void Java_org_thunderdog_challegram_N_stopRecord(JNIEnv *env, jclass c
         saveResumeData();
     }
     cleanupRecorder();
+}
+
+JNIEXPORT void Java_org_thunderdog_challegram_N_processVideoNoteAudioByteArray(JNIEnv *env, jclass class, jbyteArray array, jint offset, jint len, jint sampleRate) {
+    if (!array || len <= 0) return;
+    jbyte *bytes = (*env)->GetByteArrayElements(env, array, NULL);
+    if (!bytes) return;
+    soundtouch_process_video_note_frame((short *)(bytes + offset), len / 2, 1, sampleRate, -2.3f);
+    (*env)->ReleaseByteArrayElements(env, array, bytes, 0);
+}
+
+JNIEXPORT void Java_org_thunderdog_challegram_N_stopVideoNoteAudio(JNIEnv *env, jclass class) {
+    soundtouch_clear_video_note();
+}
+
+JNIEXPORT void Java_org_thunderdog_challegram_N_setVoiceCompressorEnabled(JNIEnv *env, jclass class, jboolean enabled) {
+    soundtouch_set_compressor_enabled(enabled ? 1 : 0);
 }
 
 //player

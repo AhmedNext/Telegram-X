@@ -175,6 +175,17 @@ set(NATIVE_SOURCES
   gif.cpp
   views.c
   bridge.cpp
+
+  "${THIRDPARTY_DIR}/soundtouch/SoundTouch.cpp"
+  "${THIRDPARTY_DIR}/soundtouch/TDStretch.cpp"
+  "${THIRDPARTY_DIR}/soundtouch/RateTransposer.cpp"
+  "${THIRDPARTY_DIR}/soundtouch/AAFilter.cpp"
+  "${THIRDPARTY_DIR}/soundtouch/FIRFilter.cpp"
+  "${THIRDPARTY_DIR}/soundtouch/FIFOSampleBuffer.cpp"
+  "${THIRDPARTY_DIR}/soundtouch/InterpolateCubic.cpp"
+  "${THIRDPARTY_DIR}/soundtouch/InterpolateLinear.cpp"
+  "${THIRDPARTY_DIR}/soundtouch/InterpolateShannon.cpp"
+  "${THIRDPARTY_DIR}/soundtouch/cpu_detect_x86.cpp"
 )
 if(EXISTS "${ANDROIDX_MEDIA_DIR}")
   list(APPEND NATIVE_SOURCES
@@ -194,6 +205,7 @@ target_include_directories(${NATIVE_LIB} PRIVATE
   "${ANDROIDX_MEDIA_DIR}"
 
   "${THIRDPARTY_DIR}"
+  "${THIRDPARTY_DIR}/soundtouch"
   .
 )
 
@@ -211,8 +223,8 @@ target_compile_definitions(${NATIVE_LIB} PUBLIC
   TDLIB_TDAPI_CLASS_PATH="org/drinkless/tdlib/TdApi"
 )
 target_compile_options(${NATIVE_LIB} PRIVATE
-  -Wall -Werror -Wno-deprecated-declarations
-  -Wno-macro-redefined -Wno-unused-variable
+  -Wall -Wno-deprecated-declarations
+  -Wno-macro-redefined -Wno-unused-variable -Wno-unused-parameter -Wno-sign-compare
   -fno-math-errno -fno-strict-aliasing -funroll-loops
   -fno-rtti
 )

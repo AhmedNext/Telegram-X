@@ -26,6 +26,7 @@ import androidx.annotation.Nullable;
 import org.drinkless.tdlib.Client;
 import org.drinkless.tdlib.TdApi;
 import org.thunderdog.challegram.R;
+import org.thunderdog.challegram.config.Config;
 import org.thunderdog.challegram.component.base.SettingView;
 import org.thunderdog.challegram.core.Lang;
 import org.thunderdog.challegram.data.TGNetworkStats;
@@ -214,6 +215,8 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
           view.setData(networkStats != null ? networkStats.getWiFiEntry() : Lang.getString(R.string.Calculating));
         } else if (itemId == R.id.btn_resetNetworkStats) {
           view.setData(networkStats != null ? networkStats.getDateEntry() : Lang.getString(R.string.LoadingInformation));
+        } else if (itemId == R.id.btn_voiceCompressor) {
+          view.getToggler().setRadioEnabled(Config.isVoiceCompressorEnabled(), isUpdate);
         }
       }
     };
@@ -271,6 +274,12 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
         new ListItem(ListItem.TYPE_SEPARATOR_FULL),
         new ListItem(ListItem.TYPE_SETTING, R.id.btn_showAdvanced, 0, R.string.Advanced),
         new ListItem(ListItem.TYPE_SHADOW_BOTTOM),
+
+        new ListItem(ListItem.TYPE_HEADER, 0, 0, R.string.VoiceMessages),
+        new ListItem(ListItem.TYPE_SHADOW_TOP),
+        new ListItem(ListItem.TYPE_RADIO_SETTING, R.id.btn_voiceCompressor, 0, R.string.VoiceCompressor),
+        new ListItem(ListItem.TYPE_SHADOW_BOTTOM),
+        new ListItem(ListItem.TYPE_DESCRIPTION, 0, 0, R.string.VoiceCompressorDesc),
       };
     }
     this.adapter.setItems(rawItems, false);
@@ -508,6 +517,8 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
       }).setIntDelegate(this));
     } else if (id == R.id.btn_proxy) {
       tdlib.ui().openProxySettings(this, true);
+    } else if (id == R.id.btn_voiceCompressor) {
+      Config.setVoiceCompressorEnabled(toggleResult);
     } else if (id == R.id.btn_dataSaver) {
       if (tdlib.files().setDataSaverEnabled(toggleResult)) {
         adapter.updateValuedSettingById(R.id.btn_dataSaverForce);
