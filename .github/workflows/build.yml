@@ -23,11 +23,11 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: 12266719
-          accept-android-sdk-licenses: true
+      - name: Configure Android SDK
+        run: |
+          echo "ANDROID_HOME=${ANDROID_HOME}"
+          sdkmanager --version
+          yes | sdkmanager --licenses >/dev/null || true
 
       - name: Install Android SDK packages
         run: |
@@ -53,6 +53,7 @@ jobs:
           SDK_DIR="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           API_ID="${SECRET_API_ID:-24001192}"
           API_HASH="${SECRET_API_HASH:-172896bf88d793b99641a69c7ca9d463}"
+
           cat <<EOF > local.properties
           sdk.dir=$SDK_DIR
           telegram.api_id=$API_ID
@@ -64,7 +65,8 @@ jobs:
           app.disable_signing=true
           app.dontobfuscate=true
           EOF
-          cat local.properties
+
+          grep -vE 'telegram\.(api_id|api_hash)=' local.properties
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
