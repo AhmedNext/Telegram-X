@@ -1310,7 +1310,7 @@ public class RoundVideoRecorder {
             bufferSize = ((recordBufferSize / 2048) + 1) * 2048 * 2;
           }
           try {
-            audioRecorderFinal = new AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize);
+            audioRecorderFinal = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize);
             audioRecorderFinal.startRecording();
             audioRecorder = audioRecorderFinal;
             break;

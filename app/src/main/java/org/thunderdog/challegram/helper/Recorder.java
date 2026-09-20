@@ -233,7 +233,7 @@ public class Recorder implements Runnable {
         fileBuffer.rewind();
       }
 
-      recorder = new AudioRecord(MediaRecorder.AudioSource.MIC, 48000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize * 10);
+      recorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, 48000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize * 10);
     } catch (Throwable t) {
       Log.e("Couldn't set up recorder", t);
       dispatchError();
@@ -513,7 +513,7 @@ public class Recorder implements Runnable {
       if (AutomaticGainControl.isAvailable()) {
         agc = AutomaticGainControl.create(recorder.getAudioSessionId());
         if (agc != null)
-          agc.setEnabled(true);
+          agc.setEnabled(false); // Bypass hardware AGC to match exteraGram studio dynamics and prevent noise pumping
       } else {
         Log.w(Log.TAG_VOICE, "AutomaticGainControl is not available on this device");
       }
@@ -537,7 +537,7 @@ public class Recorder implements Runnable {
       if (AcousticEchoCanceler.isAvailable()) {
         aec = AcousticEchoCanceler.create(recorder.getAudioSessionId());
         if (aec != null)
-          aec.setEnabled(isGoodAudioEffect(aec));
+          aec.setEnabled(false); // Bypass hardware AEC to match exteraGram chest resonance and prevent tinny comb-filtering
       } else {
         Log.w(Log.TAG_VOICE, "AcousticEchoCanceler is not available on this device");
       }

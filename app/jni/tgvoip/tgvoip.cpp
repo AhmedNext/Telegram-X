@@ -847,6 +847,14 @@ JNI_FUNC(jobjectArray, getTgCallsVersions) {
 #endif
 }
 
+extern "C" void soundtouch_set_compressor_enabled(int enabled);
+
+extern "C" JNIEXPORT void JNICALL
+Java_org_thunderdog_challegram_voip_TgCallsController_setVoiceCompressorEnabled(
+    JNIEnv *env, jclass clazz, jboolean enabled) {
+  soundtouch_set_compressor_enabled(enabled ? 1 : 0);
+}
+
 // JNI initialization
 
 extern "C" {

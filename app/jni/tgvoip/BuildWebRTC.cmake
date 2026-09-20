@@ -2304,7 +2304,18 @@ add_library(webrtc STATIC
   "${WEBRTC_DIR}/audio/audio_receive_stream.cc"
   "${WEBRTC_DIR}/audio/audio_send_stream.cc"
   "${WEBRTC_DIR}/audio/audio_state.cc"
-  "${WEBRTC_DIR}/audio/audio_transport_impl.cc"
+  "${PROJECT_SOURCE_DIR}/audio_transport_impl.cc"
+
+  "${PROJECT_SOURCE_DIR}/../third_party/soundtouch/SoundTouch.cpp"
+  "${PROJECT_SOURCE_DIR}/../third_party/soundtouch/TDStretch.cpp"
+  "${PROJECT_SOURCE_DIR}/../third_party/soundtouch/RateTransposer.cpp"
+  "${PROJECT_SOURCE_DIR}/../third_party/soundtouch/AAFilter.cpp"
+  "${PROJECT_SOURCE_DIR}/../third_party/soundtouch/FIRFilter.cpp"
+  "${PROJECT_SOURCE_DIR}/../third_party/soundtouch/FIFOSampleBuffer.cpp"
+  "${PROJECT_SOURCE_DIR}/../third_party/soundtouch/InterpolateCubic.cpp"
+  "${PROJECT_SOURCE_DIR}/../third_party/soundtouch/InterpolateLinear.cpp"
+  "${PROJECT_SOURCE_DIR}/../third_party/soundtouch/InterpolateShannon.cpp"
+  "${PROJECT_SOURCE_DIR}/../third_party/soundtouch/cpu_detect_x86.cpp"
   "${WEBRTC_DIR}/audio/channel_receive.cc"
   "${WEBRTC_DIR}/audio/channel_receive_frame_transformer_delegate.cc"
   "${WEBRTC_DIR}/audio/channel_send.cc"
@@ -2687,6 +2698,7 @@ set(WEBRTC_OPTIONS
   DYNAMIC_ANNOTATIONS_ENABLED=0
   WEBRTC_ENABLE_PROTOBUF=0
   WEBRTC_NON_STATIC_TRACE_EVENT_HANDLERS=0
+  ST_NO_EXCEPTION_HANDLING
 )
 
 target_compile_definitions(webrtc PUBLIC ${WEBRTC_OPTIONS})
@@ -2778,6 +2790,8 @@ target_include_directories(webrtc PRIVATE
   .
   "${CMAKE_HOME_DIRECTORY}"
   "${STUB_DIR}"
+  "${PROJECT_SOURCE_DIR}/../third_party/soundtouch"
+  "${PROJECT_SOURCE_DIR}/../third_party"
 )
 
 target_include_directories(webrtc PUBLIC

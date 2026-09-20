@@ -32,9 +32,15 @@ public class TgCallsController extends VoIPInstance {
     super(tdlib, call, configuration, options, stateListener);
     if (configuration.state.encryptionKey.length != 256)
       throw new IllegalArgumentException(Integer.toString(configuration.state.encryptionKey.length));
+    try {
+      setVoiceCompressorEnabled(org.thunderdog.challegram.config.Config.isVoiceCompressorEnabled());
+    } catch (Throwable ignored) {
+    }
     this.version = version;
     this.nativePtr = newInstance(version, configuration, options);
   }
+
+  public static native void setVoiceCompressorEnabled (boolean enabled);
 
   private long nativePtr () {
     long ptr = nativePtr;

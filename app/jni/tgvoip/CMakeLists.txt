@@ -143,6 +143,8 @@ target_include_directories(${TGCALLS_LIB} PRIVATE
   "${YUV_DIR}/include"
   "${TGCALLS_DEPS_DIR}/webrtc_deps"
   "${STUB_DIR}"
+  "${PROJECT_SOURCE_DIR}/../third_party/soundtouch"
+  "${PROJECT_SOURCE_DIR}/../third_party"
 )
 if (${ANDROID_ABI} STREQUAL "armeabi-v7a" OR ${ANDROID_ABI} STREQUAL "arm64-v8a")
   set_target_properties(${TGCALLS_LIB} PROPERTIES

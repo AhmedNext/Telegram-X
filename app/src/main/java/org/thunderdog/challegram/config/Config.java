@@ -364,5 +364,8 @@ public class Config {
     try {
       N.setVoiceCompressorEnabled(enabled);
     } catch (Throwable ignored) { }
+    try {
+      org.thunderdog.challegram.voip.TgCallsController.setVoiceCompressorEnabled(enabled);
+    } catch (Throwable ignored) { }
   }
 }
