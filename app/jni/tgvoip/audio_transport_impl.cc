@@ -108,25 +108,8 @@ AudioTransportImpl::~AudioTransportImpl() {
   soundtouch_clear_call();
 }
 
-int32_t AudioTransportImpl::RecordedDataIsAvailable(
-    const void* audio_data,
-    const size_t number_of_frames,
-    const size_t bytes_per_sample,
-    const size_t number_of_channels,
-    const uint32_t sample_rate,
-    const uint32_t audio_delay_milliseconds,
-    const int32_t clock_drift,
-    const uint32_t volume,
-    const bool key_pressed,
-    uint32_t& new_mic_volume) {  // NOLINT: to avoid changing APIs
-  return RecordedDataIsAvailable(
-      audio_data, number_of_frames, bytes_per_sample, number_of_channels,
-      sample_rate, audio_delay_milliseconds, clock_drift, volume, key_pressed,
-      new_mic_volume, /* estimated_capture_time_ns */ 0);
-}
-
-// Not used in Chromium. Process captured audio and distribute to all sending
-// streams, and try to do this at the lowest possible sample rate.
+// Not used in Chromium. Process captured audio and distribute it to all
+// sending streams, and try to do this at the lowest possible sample rate.
 int32_t AudioTransportImpl::RecordedDataIsAvailable(
     const void* audio_data,
     const size_t number_of_frames,
@@ -137,15 +120,12 @@ int32_t AudioTransportImpl::RecordedDataIsAvailable(
     const int32_t /*clock_drift*/,
     const uint32_t /*volume*/,
     const bool key_pressed,
-    uint32_t& /*new_mic_volume*/,
-    const int64_t
-        estimated_capture_time_ns) {  // NOLINT: to avoid changing APIs
+    uint32_t& /*new_mic_volume*/) {
   RTC_DCHECK(audio_data);
   RTC_DCHECK_GE(number_of_channels, 1);
   RTC_DCHECK_LE(number_of_channels, 2);
   RTC_DCHECK_EQ(2 * number_of_channels, bytes_per_sample);
   RTC_DCHECK_GE(sample_rate, AudioProcessing::NativeRate::kSampleRate8kHz);
-  // 100 = 1 second / data duration (10 ms).
   RTC_DCHECK_EQ(number_of_frames * 100, sample_rate);
   RTC_DCHECK_LE(bytes_per_sample * number_of_frames * number_of_channels,
                 AudioFrame::kMaxDataSizeBytes);
@@ -163,20 +143,24 @@ int32_t AudioTransportImpl::RecordedDataIsAvailable(
   std::unique_ptr<AudioFrame> audio_frame(new AudioFrame());
   InitializeCaptureFrame(sample_rate, send_sample_rate_hz, number_of_channels,
                          send_num_channels, audio_frame.get());
+
   voe::RemixAndResample(static_cast<const int16_t*>(audio_data),
                         number_of_frames, number_of_channels, sample_rate,
                         &capture_resampler_, audio_frame.get());
+
   ProcessCaptureFrame(audio_delay_milliseconds, key_pressed,
                       swap_stereo_channels, audio_processing_,
                       audio_frame.get());
-  audio_frame->set_absolute_capture_timestamp_ms(estimated_capture_time_ns /
-                                                 1000000);
+
+  // The active AudioTransport API has no capture timestamp parameter.
+  audio_frame->set_absolute_capture_timestamp_ms(0);
 
   RTC_DCHECK_GT(audio_frame->samples_per_channel_, 0);
-  if (async_audio_processing_)
+  if (async_audio_processing_) {
     async_audio_processing_->Process(std::move(audio_frame));
-  else
+  } else {
     SendProcessedData(std::move(audio_frame));
+  }
 
   return 0;
 }
