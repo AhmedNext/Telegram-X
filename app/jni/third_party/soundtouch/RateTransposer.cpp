@@ -33,6 +33,7 @@
 
 #include <memory.h>
 #include <assert.h>
+#include <algorithm>
 #include <stdlib.h>
 #include <stdio.h>
 #include "RateTransposer.h"
